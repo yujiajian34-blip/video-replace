@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频角色替换工作台</title>
+    <style>
+        :root {
+            --bg: #f7f1e8;
+            --bg-soft: #fbf8f2;
+            --surface: rgba(255, 255, 255, 0.9);
+            --surface-strong: #fffdfa;
+            --line: rgba(34, 47, 71, 0.12);
+            --line-strong: rgba(34, 47, 71, 0.2);
+            --text: #243047;
+            --muted: #67748a;
+            --brand: #1f4c72;
+            --brand-strong: #163753;
+            --brand-soft: #edf5fb;
+            --accent: #c06e43;
+            --accent-soft: #fff0e6;
+            --success: #1d7a57;
+            --success-soft: #ecf9f2;
+            --warning: #9d5a1d;
+            --warning-soft: #fff4e7;
+            --danger: #b53f48;
+            --danger-soft: #fff0f1;
+            --shadow: 0 22px 60px rgba(60, 42, 21, 0.09);
+            --shadow-soft: 0 12px 28px rgba(60, 42, 21, 0.07);
+            --radius-xl: 28px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: "Avenir Next", "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(192, 110, 67, 0.16), transparent 28%),
+                radial-gradient(circle at top right, rgba(31, 76, 114, 0.14), transparent 24%),
+                linear-gradient(180deg, #fbf7ef 0%, #f3ecdf 58%, #efe6d8 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image: linear-gradient(rgba(36, 48, 71, 0.026) 1px, transparent 1px), linear-gradient(90deg, rgba(36, 48, 71, 0.026) 1px, transparent 1px);
+            background-size: 34px 34px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 92%);
+        }
+
+        a {
+            color: var(--brand);
+        }
+
+        .page-shell {
+            max-width: 1380px;
+            margin: 0 auto;
+            padding: 28px 24px 44px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: minmax(0, 1.65fr) minmax(290px, 0.95fr);
+            gap: 24px;
+            align-items: stretch;
+            padding: 34px;
+            margin-bottom: 24px;
+            border-radius: 32px;
+            color: #fbf7ef;
+            background: linear-gradient(135deg, rgba(19, 45, 71, 0.96) 0%, rgba(34, 81, 121, 0.92) 56%, rgba(192, 110, 67, 0.9) 100%);
+            box-shadow: var(--shadow);
+        }
+
+        .hero::before,
+        .hero::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.09);
+        }
+
+        .hero::before {
+            width: 260px;
+            height: 260px;
+            top: -80px;
+            right: 16%;
+        }
+
+        .hero::after {
+            width: 180px;
+            height: 180px;
+            bottom: -70px;
+            left: 34%;
+        }
+
+        .hero-copy,
+        .hero-panel {
+            position: relative;
+            z-index: 1;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        .hero h1 {
+            font-size: clamp(34px, 5vw, 54px);
+            line-height: 0.96;
+            max-width: 10ch;
+            margin-bottom: 14px;
+        }
+
+        .hero-copy p {
+            max-width: 58ch;
+            font-size: 15px;
+            line-height: 1.75;
+            color: rgba(251, 247, 239, 0.86);
+        }
+
+        .hero-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .hero-tag {
+            padding: 9px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: #fff7ef;
+        }
+
+        .hero-panel {
+            background: rgba(255, 252, 245, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 22px;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero-panel h3 {
+            font-size: 15px;
+            margin-bottom: 14px;
+        }
+
+        .hero-steps {
+            display: grid;
+            gap: 12px;
+        }
+
+        .hero-step {
+            display: grid;
+            grid-template-columns: 34px 1fr;
+            gap: 12px;
+            align-items: start;
+        }
+
+        .hero-step strong {
+            display: grid;
+            place-items: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 13px;
+        }
+
+        .hero-step span {
+            font-size: 13px;
+            line-height: 1.62;
+            color: rgba(251, 247, 239, 0.84);
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .main-column,
+        .side-column {
+            display: grid;
+            gap: 20px;
+        }
+
+        .side-column {
+            position: sticky;
+            top: 24px;
+        }
+
+        .card {
+            position: relative;
+            overflow: hidden;
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            border-radius: var(--radius-xl);
+            padding: 26px;
+            box-shadow: var(--shadow-soft);
+            backdrop-filter: blur(18px);
+            animation: card-enter 420ms ease;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto;
+            height: 5px;
+            background: linear-gradient(90deg, var(--brand), var(--accent));
+        }
+
+        @keyframes card-enter {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card-header h2 {
+            font-size: 22px;
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+
+        .card-header p {
+            font-size: 14px;
+            line-height: 1.65;
+            color: var(--muted);
+        }
+
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            white-space: nowrap;
+            background: var(--brand-soft);
+            color: var(--brand);
+            border: 1px solid rgba(31, 76, 114, 0.1);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .input-grid {
+            display: grid;
+            gap: 18px;
+        }
+
+        .field-card {
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px solid var(--line);
+            background: rgba(255, 253, 248, 0.84);
+        }
+
+        .field-card h3 {
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .field-card > p {
+            font-size: 13px;
+            line-height: 1.58;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .field-hint {
+            margin-top: 8px;
+            font-size: 12px;
+            line-height: 1.55;
+            color: var(--muted);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 13px 15px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.45;
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.96);
+            transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #96a2b1;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: rgba(31, 76, 114, 0.46);
+            box-shadow: 0 0 0 4px rgba(31, 76, 114, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 112px;
+        }
+
+        .image-inputs {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .flex-row > * {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .controls-inline {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 180px;
+            gap: 16px;
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 48px;
+            padding: 0 20px;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.58;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-primary {
+            color: #fffaf3;
+            background: linear-gradient(135deg, var(--brand) 0%, #356b98 55%, var(--accent) 100%);
+            box-shadow: 0 16px 28px rgba(31, 76, 114, 0.18);
+        }
+
+        .btn-outline {
+            color: var(--brand);
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(31, 76, 114, 0.14);
+        }
+
+        .btn-danger {
+            color: #fff7f7;
+            background: linear-gradient(135deg, #c34b58 0%, #a73e47 100%);
+            box-shadow: 0 14px 24px rgba(181, 63, 72, 0.18);
+        }
+
+        .btn-download {
+            color: #f8fff9;
+            background: linear-gradient(135deg, #1f7a5f 0%, #34a37c 100%);
+        }
+
+        .btn-sm {
+            min-height: 38px;
+            padding: 0 14px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .helper-card {
+            background: linear-gradient(180deg, rgba(255, 253, 247, 0.96), rgba(247, 241, 231, 0.94));
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .insight-tile {
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.78);
+        }
+
+        .insight-tile span {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .insight-tile strong {
+            display: block;
+            font-size: 20px;
+            line-height: 1.08;
+            color: var(--text);
+        }
+
+        .checklist {
+            display: grid;
+            gap: 10px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.68);
+            border: 1px solid var(--line);
+            font-size: 13px;
+            line-height: 1.55;
+            color: var(--muted);
+        }
+
+        .checklist-item strong {
+            display: grid;
+            place-items: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 999px;
+            background: var(--brand-soft);
+            color: var(--brand);
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .preview-card {
+            min-height: 420px;
+        }
+
+        .preview-area {
+            display: grid;
+            gap: 14px;
+        }
+
+        .preview-box {
+            min-height: 210px;
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px dashed rgba(31, 76, 114, 0.24);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 244, 236, 0.85));
+        }
+
+        .preview-box.empty {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .preview-box img,
+        .preview-box video {
+            max-width: 100%;
+            max-height: 320px;
+            border-radius: 16px;
+            box-shadow: 0 12px 24px rgba(36, 48, 71, 0.08);
+        }
+
+        .preview-images {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .preview-images img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .status-area {
+            margin-top: 18px;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid transparent;
+            font-size: 14px;
+            line-height: 1.65;
+        }
+
+        .status-bar.info {
+            background: var(--brand-soft);
+            color: var(--brand);
+            border-color: rgba(31, 76, 114, 0.12);
+        }
+
+        .status-bar.success {
+            background: var(--success-soft);
+            color: var(--success);
+            border-color: rgba(29, 122, 87, 0.14);
+        }
+
+        .status-bar.error {
+            background: var(--danger-soft);
+            color: var(--danger);
+            border-color: rgba(181, 63, 72, 0.14);
+        }
+
+        .status-bar.warning {
+            background: var(--warning-soft);
+            color: var(--warning);
+            border-color: rgba(157, 90, 29, 0.16);
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            border: 2px solid rgba(31, 76, 114, 0.18);
+            border-top-color: var(--brand);
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .progress-steps {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+            margin: 18px 0;
+        }
+
+        .step {
+            min-height: 92px;
+            padding: 14px 12px 12px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.76);
+            color: #8792a3;
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .step::before {
+            content: "";
+            display: block;
+            width: 34px;
+            height: 6px;
+            border-radius: 999px;
+            background: #d7dbe2;
+            margin-bottom: 12px;
+        }
+
+        .step.active {
+            color: var(--brand);
+            background: #f5fbff;
+            border-color: rgba(31, 76, 114, 0.18);
+        }
+
+        .step.active::before {
+            background: linear-gradient(90deg, var(--brand), #5f89ad);
+        }
+
+        .step.done {
+            color: var(--success);
+            background: #f3fbf7;
+            border-color: rgba(29, 122, 87, 0.16);
+        }
+
+        .step.done::before {
+            background: linear-gradient(90deg, var(--success), #45a97d);
+        }
+
+        .batch-tasks {
+            display: grid;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .batch-task-item {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.76);
+            font-size: 13px;
+        }
+
+        .task-meta {
+            display: grid;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .task-meta strong {
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .task-meta span {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .batch-task-item .task-status {
+            padding: 7px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .task-status.pending {
+            background: #fef3c7;
+            color: #8b5a13;
+        }
+
+        .task-status.running {
+            background: #dbeafe;
+            color: #1f4c72;
+        }
+
+        .task-status.succeeded {
+            background: #d9f5e7;
+            color: #166845;
+        }
+
+        .task-status.failed {
+            background: #fee2e2;
+            color: #a33c43;
+        }
+
+        .task-status.created {
+            background: #e6eef7;
+            color: #355a7d;
+        }
+
+        .task-link {
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .analysis-box {
+            margin-top: 6px;
+            padding: 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(31, 76, 114, 0.12);
+            background: rgba(248, 252, 255, 0.84);
+            color: #44536a;
+            line-height: 1.75;
+            font-size: 13px;
+            max-height: 360px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .analysis-actions {
+            display: none;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        #resultContent {
+            display: grid;
+            gap: 16px;
+        }
+
+        .result-card {
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .result-card h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .result-card p {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.65;
+            word-break: break-all;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+        }
+
+        .result-video {
+            width: 100%;
+            margin-top: 14px;
+            border-radius: 18px;
+            background: #000;
+        }
+
+        .role-library {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 14px;
+            margin-top: 10px;
+        }
+
+        .role-item {
+            position: relative;
+            padding: 12px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        .role-item:hover {
+            transform: translateY(-2px);
+            border-color: rgba(31, 76, 114, 0.18);
+            box-shadow: 0 12px 20px rgba(31, 76, 114, 0.08);
+        }
+
+        .role-item img {
+            width: 100%;
+            height: 144px;
+            object-fit: cover;
+            border-radius: 14px;
+            margin-bottom: 10px;
+        }
+
+        .role-item .role-preset {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--muted);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .role-item .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: none;
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: rgba(181, 63, 72, 0.92);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(24, 32, 45, 0.52);
+            backdrop-filter: blur(8px);
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            width: min(100%, 820px);
+            max-height: 84vh;
+            overflow-y: auto;
+            padding: 24px;
+            border-radius: 28px;
+            background: #fffdfa;
+            box-shadow: var(--shadow);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .modal-header h3 {
+            font-size: 22px;
+        }
+
+        .modal-close {
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.88);
+            color: var(--muted);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1080px) {
+            .hero,
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .side-column {
+                position: static;
+            }
+
+            .controls-inline {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-shell {
+                padding: 16px 14px 30px;
+            }
+
+            .hero,
+            .card,
+            .modal-content {
+                padding: 20px;
+                border-radius: 24px;
+            }
+
+            .hero h1 {
+                max-width: none;
+            }
+
+            .image-inputs,
+            .insight-grid,
+            .progress-steps,
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .flex-row,
+            .action-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .batch-task-item {
+                grid-template-columns: 1fr;
+                justify-items: start;
+            }
+
+            .preview-images {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <div class="hero">
+            <div class="hero-copy">
+                <div class="eyebrow">Role Replace Studio</div>
+                <h1>视频角色替换工作台</h1>
+                <p>把视频来源、角色参考图、角色设定、执行状态和生成结果收进同一个页面。新的界面重点强化了信息层级、预览位置和任务状态展示，减少单页堆叠造成的扫读负担。</p>
+                <div class="hero-tags">
+                    <span class="hero-tag">Gemini 分析</span>
+                    <span class="hero-tag">Seedance 生成</span>
+                    <span class="hero-tag">TikTok 自动解析</span>
+                    <span class="hero-tag">批量任务轮询</span>
+                </div>
+            </div>
+            <div class="hero-panel">
+                <h3>推荐操作顺序</h3>
+                <div class="hero-steps">
+                    <div class="hero-step">
+                        <strong>01</strong>
+                        <span>先确认视频链接可访问，再补齐角色参考图。</span>
+                    </div>
+                    <div class="hero-step">
+                        <strong>02</strong>
+                        <span>写清角色预设，决定是单任务还是批量并发。</span>
+                    </div>
+                    <div class="hero-step">
+                        <strong>03</strong>
+                        <span>启动分析和生成，处理进度与结果会集中展示在下方。</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="workspace">
+            <div class="main-column">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>输入参数</h2>
+                            <p>主表单负责收集视频、角色图和预设，布局按操作顺序重新整理。</p>
+                        </div>
+                        <div class="section-badge">准备区</div>
+                    </div>
+
+                    <div class="input-grid">
+                        <div class="field-card">
+                            <h3>视频来源</h3>
+                            <p>支持从 Google 表格选择、直接输入可访问的视频直链，或粘贴 TikTok 链接自动解析。</p>
+                            <div class="form-group">
+                                <label>视频链接</label>
+                                <div class="flex-row">
+                                    <select id="videoUrlSelect" onchange="selectVideoFromSheet()">
+                                        <option value="">-- 从 Google 表格选择 --</option>
+                                    </select>
+                                    <input type="text" id="videoUrl" placeholder="输入视频 URL 或 TikTok 链接" oninput="handleVideoInput()">
+                                </div>
+                                <div class="field-hint">检测到 TikTok 链接时，页面会在输入后自动尝试解析成可下载直链。</div>
+                                <div id="tiktokStatus" style="display:none; margin-top:10px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="field-card">
+                            <h3>角色参考图</h3>
+                            <p>建议至少 1 张，最多 3 张。右侧会实时刷新图片预览。</p>
+                            <div class="form-group">
+                                <label>图片 URL</label>
+                                <div class="image-inputs">
+                                    <input type="text" id="roleImage1" placeholder="角色图片 1 URL" oninput="autoPreviewImage()">
+                                    <input type="text" id="roleImage2" placeholder="角色图片 2 URL（可选）" oninput="autoPreviewImage()">
+                                    <input type="text" id="roleImage3" placeholder="角色图片 3 URL（可选）" oninput="autoPreviewImage()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="controls-inline">
+                            <div class="field-card">
+                                <h3>角色预设</h3>
+                                <p>尽量描述身份关系、年龄层、情绪功能和叙事定位，便于分析判断适配度。</p>
+                                <div class="form-group">
+                                    <label>预设描述</label>
+                                    <textarea id="rolePreset" placeholder="例如：角色 1 是主动型年轻女性，角色 2 是偏克制的成熟男性……" oninput="updateWorkspaceSummary()" onchange="savePreset()"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="field-card">
+                                <h3>生成控制</h3>
+                                <p>单任务适合确认方案，多并发适合一次性批量尝试。</p>
+                                <div class="form-group">
+                                    <label>并发数量</label>
+                                    <input type="number" id="concurrency" min="1" max="10" value="1" placeholder="1-10" oninput="updateWorkspaceSummary()">
+                                    <div class="field-hint">并发数量大于 1 时会自动切换为批量任务模式。</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="action-row">
+                            <button class="btn btn-primary" id="startBtn" onclick="startProcess()">开始角色替换</button>
+                            <button class="btn btn-outline" onclick="showRoleLibrary()">角色库</button>
+                            <button class="btn btn-outline" onclick="showPromptEditor()">提示词配置</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="progressCard" style="display:none;">
+                    <div class="card-header">
+                        <div>
+                            <h2>处理进度</h2>
+                            <p>当前步骤、状态提示和批量任务队列会集中显示在这里。</p>
+                        </div>
+                        <div class="section-badge">执行区</div>
+                    </div>
+
+                    <div class="progress-steps">
+                        <div class="step" id="step1">① Gemini 分析</div>
+                        <div class="step" id="step2">② 适配检查</div>
+                        <div class="step" id="step3">③ 创建任务</div>
+                        <div class="step" id="step4">④ 生成视频</div>
+                        <div class="step" id="step5">⑤ 完成</div>
+                    </div>
+
+                    <div class="status-area" id="statusArea"></div>
+                    <div class="batch-tasks" id="batchTasks"></div>
+                </div>
+
+                <div class="card" id="analysisCard" style="display:none;">
+                    <div class="card-header">
+                        <div>
+                            <h2>Gemini 分析结果</h2>
+                            <p>保留原始 JSON 输出，便于查看角色映射、适配度和后续生成提示词。</p>
+                        </div>
+                        <div class="section-badge">分析区</div>
+                    </div>
+                    <div class="analysis-box" id="analysisContent"></div>
+                    <div class="analysis-actions" id="analysisActions">
+                        <button class="btn btn-danger" id="forceGenerateBtn" onclick="forceGenerate()">强行生成并继续</button>
+                    </div>
+                </div>
+
+                <div class="card" id="resultCard" style="display:none;">
+                    <div class="card-header">
+                        <div>
+                            <h2>生成结果</h2>
+                            <p>成功结果优先展示视频卡片和下载按钮，减少无关文本干扰。</p>
+                        </div>
+                        <div class="section-badge">结果区</div>
+                    </div>
+                    <div id="resultContent"></div>
+                </div>
+            </div>
+
+            <div class="side-column">
+                <div class="card helper-card">
+                    <div class="card-header">
+                        <div>
+                            <h2>当前配置摘要</h2>
+                            <p>不用回到顶部，也能快速确认素材和执行模式。</p>
+                        </div>
+                        <div class="section-badge">侧边栏</div>
+                    </div>
+
+                    <div class="insight-grid">
+                        <div class="insight-tile">
+                            <span>视频来源</span>
+                            <strong id="videoSourceStat">未填写</strong>
+                        </div>
+                        <div class="insight-tile">
+                            <span>角色图片</span>
+                            <strong id="imageCountStat">0 张</strong>
+                        </div>
+                        <div class="insight-tile">
+                            <span>执行模式</span>
+                            <strong id="modeStat">单任务</strong>
+                        </div>
+                        <div class="insight-tile">
+                            <span>预设长度</span>
+                            <strong id="presetLengthStat">0 字</strong>
+                        </div>
+                    </div>
+
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <strong>1</strong>
+                            <span>优先确认视频地址能直接访问，否则分析和下载都会失败。</span>
+                        </div>
+                        <div class="checklist-item">
+                            <strong>2</strong>
+                            <span>角色图不必强行凑满 3 张，但尽量保证身份关系明确。</span>
+                        </div>
+                        <div class="checklist-item">
+                            <strong>3</strong>
+                            <span>批量模式更适合探索多个结果，不适合第一次精细排错。</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card preview-card" id="previewCard" style="display:none;">
+                    <div class="card-header">
+                        <div>
+                            <h2>素材预览</h2>
+                            <p>视频和角色图预览固定在右侧，避免打断主操作流。</p>
+                        </div>
+                        <div class="section-badge">预览区</div>
+                    </div>
+                    <div class="preview-area">
+                        <div class="preview-box empty" id="videoPreview">暂无视频预览</div>
+                        <div class="preview-box empty" id="imagePreview">暂无图片预览</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="roleLibraryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>角色库</h3>
+                <button class="modal-close" onclick="closeRoleLibrary()">&times;</button>
+            </div>
+            <div class="role-library" id="roleLibraryList"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="promptEditorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>提示词配置</h3>
+                <button class="modal-close" onclick="closePromptEditor()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Gemini 分析提示词</label>
+                <textarea id="geminiPrompt" style="min-height: 220px;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>豆包固定提示词</label>
+                <textarea id="doubaoPrompt" style="min-height: 170px;"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="savePromptConfig()">保存配置</button>
+        </div>
+    </div>
+
+    <script src="/api-base.js"></script>
+    <script>
+        const API_BASE = window.resolveApiBase(window.location);
+        let currentTaskId = null;
+        let currentBatchId = null;
+        let pollTimer = null;
+        let previewTimer = null;
+        let tiktokResolveTimer = null;
+
+        function getRoleImages() {
+            return [1, 2, 3]
+                .map((i) => document.getElementById(`roleImage${i}`).value.trim())
+                .filter(Boolean);
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function buildVideoProxyUrl(videoUrl) {
+            return `${API_BASE}/api/video_proxy?url=${encodeURIComponent(videoUrl)}`;
+        }
+
+        function buildVideoPreviewHtml(videoUrl, options = {}) {
+            const {
+                className = "",
+                style = "",
+                fallbackText = "预览失败，请直接打开原始链接。"
+            } = options;
+            const safeProxyUrl = escapeHtml(buildVideoProxyUrl(videoUrl));
+            const safeOriginalUrl = escapeHtml(videoUrl);
+            const clickArg = JSON.stringify(videoUrl);
+
+            return `
+                <div data-video-preview-host="1" style="width:100%;">
+                    <video class="${className}" controls preload="metadata" playsinline ${style ? `style="${style}"` : ""} onerror='handleVideoPreviewError(this, ${clickArg}, ${JSON.stringify(fallbackText)})'>
+                        <source src="${safeProxyUrl}">
+                    </video>
+                    <div class="field-hint" style="margin-top:10px;">
+                        若画面未显示，可<a href="${safeOriginalUrl}" target="_blank" rel="noreferrer">打开原始视频链接</a>或使用下载按钮。
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleVideoPreviewError(videoEl, videoUrl, fallbackText) {
+            const host = videoEl.closest("[data-video-preview-host]");
+            if (!host) return;
+            const safeUrl = escapeHtml(videoUrl);
+            host.innerHTML = `
+                <div class="status-bar warning">
+                    ${escapeHtml(fallbackText || "视频预览失败")}
+                    <a href="${safeUrl}" target="_blank" rel="noreferrer">打开原始链接</a>
+                </div>
+            `;
+        }
+
+        function updateWorkspaceSummary() {
+            const videoUrl = document.getElementById("videoUrl").value.trim();
+            const roleImages = getRoleImages();
+            const preset = document.getElementById("rolePreset").value.trim();
+            const concurrency = parseInt(document.getElementById("concurrency").value, 10) || 1;
+
+            let sourceText = "未填写";
+            if (videoUrl) {
+                sourceText = isTikTokUrl(videoUrl) ? "TikTok 链接" : "直链 / 表格";
+            }
+
+            document.getElementById("videoSourceStat").textContent = sourceText;
+            document.getElementById("imageCountStat").textContent = `${roleImages.length} 张`;
+            document.getElementById("modeStat").textContent = concurrency > 1 ? `批量 ${concurrency}` : "单任务";
+            document.getElementById("presetLengthStat").textContent = `${preset.length} 字`;
+        }
+
+        window.onload = async function () {
+            await loadSheetVideos();
+            await loadRolePreset();
+            refreshPreviewCard();
+            updateWorkspaceSummary();
+        };
+
+        async function loadSheetVideos() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/sheets/videos`);
+                const data = await resp.json();
+                if (!data.success) return;
+
+                const select = document.getElementById("videoUrlSelect");
+                data.videos.forEach((video) => {
+                    const option = document.createElement("option");
+                    option.value = video.url;
+                    option.textContent = video.label;
+                    select.appendChild(option);
+                });
+            } catch (err) {
+                console.error("加载 Google 表格失败:", err);
+            }
+        }
+
+        function selectVideoFromSheet() {
+            const select = document.getElementById("videoUrlSelect");
+            const url = select.value;
+            if (!url) return;
+            document.getElementById("videoUrl").value = url;
+            handleVideoInput();
+        }
+
+        function isTikTokUrl(url) {
+            return /tiktok\.com/i.test(url);
+        }
+
+        function handleVideoInput() {
+            autoPreviewVideo();
+
+            clearTimeout(tiktokResolveTimer);
+            const url = document.getElementById("videoUrl").value.trim();
+            const statusDiv = document.getElementById("tiktokStatus");
+
+            if (!isTikTokUrl(url)) {
+                statusDiv.style.display = "none";
+                return;
+            }
+
+            tiktokResolveTimer = setTimeout(() => {
+                checkTikTokUrl();
+            }, 900);
+        }
+
+        async function checkTikTokUrl() {
+            const input = document.getElementById("videoUrl");
+            const url = input.value.trim();
+            const statusDiv = document.getElementById("tiktokStatus");
+
+            if (!isTikTokUrl(url)) {
+                statusDiv.style.display = "none";
+                return;
+            }
+
+            statusDiv.style.display = "";
+            statusDiv.innerHTML = '<div class="status-bar info"><div class="spinner"></div>检测到 TikTok 链接，正在通过 Apify 解析下载地址...</div>';
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/tiktok/resolve`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url })
+                });
+                const data = await resp.json();
+
+                if (data.success && data.video_url) {
+                    input.value = data.video_url;
+                    statusDiv.innerHTML = '<div class="status-bar success">TikTok 解析成功，已替换为可下载直链</div>';
+                    refreshPreviewCard();
+                    updateWorkspaceSummary();
+                    setTimeout(() => {
+                        statusDiv.style.display = "none";
+                    }, 3500);
+                } else {
+                    statusDiv.innerHTML = `<div class="status-bar error">TikTok 解析失败：${escapeHtml(data.error || "未知错误")}</div>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = `<div class="status-bar error">TikTok 解析出错：${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function autoPreviewVideo() {
+            clearTimeout(previewTimer);
+            previewTimer = setTimeout(refreshPreviewCard, 120);
+        }
+
+        function autoPreviewImage() {
+            clearTimeout(previewTimer);
+            previewTimer = setTimeout(refreshPreviewCard, 120);
+        }
+
+        function refreshPreviewCard() {
+            const videoUrl = document.getElementById("videoUrl").value.trim();
+            const images = getRoleImages();
+
+            const card = document.getElementById("previewCard");
+            const videoPreview = document.getElementById("videoPreview");
+            const imagePreview = document.getElementById("imagePreview");
+
+            updateWorkspaceSummary();
+
+            if (!videoUrl && !images.length) {
+                card.style.display = "none";
+                videoPreview.className = "preview-box empty";
+                videoPreview.textContent = "暂无视频预览";
+                imagePreview.className = "preview-box empty";
+                imagePreview.textContent = "暂无图片预览";
+                return;
+            }
+
+            card.style.display = "";
+
+            if (videoUrl) {
+                videoPreview.className = "preview-box";
+                videoPreview.innerHTML = buildVideoPreviewHtml(videoUrl, {
+                    style: "max-width:100%; max-height:320px;",
+                    fallbackText: "源视频预览失败，请直接打开原始链接。"
+                });
+            } else {
+                videoPreview.className = "preview-box empty";
+                videoPreview.textContent = "暂无视频预览";
+            }
+
+            if (images.length) {
+                imagePreview.className = "preview-box";
+                imagePreview.innerHTML = `<div class="preview-images">${images.map((url) => `<img src="${escapeHtml(url)}" loading="lazy">`).join("")}</div>`;
+            } else {
+                imagePreview.className = "preview-box empty";
+                imagePreview.textContent = "暂无图片预览";
+            }
+        }
+
+        async function loadRolePreset() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/preset`);
+                const data = await resp.json();
+                if (data.success && data.preset) {
+                    document.getElementById("rolePreset").value = data.preset;
+                }
+                updateWorkspaceSummary();
+            } catch (err) {
+                console.error("加载角色预设失败:", err);
+            }
+        }
+
+        async function savePreset() {
+            const preset = document.getElementById("rolePreset").value.trim();
+            try {
+                await fetch(`${API_BASE}/api/preset`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ preset })
+                });
+            } catch (err) {
+                console.error("保存角色预设失败:", err);
+            }
+        }
+
+        async function showRoleLibrary() {
+            document.getElementById("roleLibraryModal").classList.add("show");
+            await loadRoleLibrary();
+        }
+
+        function closeRoleLibrary() {
+            document.getElementById("roleLibraryModal").classList.remove("show");
+        }
+
+        async function loadRoleLibrary() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/roles`);
+                const data = await resp.json();
+                const list = document.getElementById("roleLibraryList");
+
+                if (!data.success || !data.roles.length) {
+                    list.innerHTML = '<p style="text-align:center; color:#7a8698; padding:18px 0;">暂无保存的角色组</p>';
+                    return;
+                }
+
+                list.innerHTML = data.roles.map((role) => `
+                    <div class="role-item" onclick="selectRole('${escapeHtml(role.id)}')">
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteRole('${escapeHtml(role.id)}')">删除</button>
+                        <img src="${escapeHtml(role.images[0] || "")}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect fill=%22%23ece7dc%22 width=%22280%22 height=%22160%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23808b99%22 font-size=%2214%22%3ENo Preview%3C/text%3E%3C/svg%3E'">
+                        <div class="role-preset">${escapeHtml(role.preset || "无预设")}</div>
+                    </div>
+                `).join("");
+            } catch (err) {
+                console.error("加载角色库失败:", err);
+            }
+        }
+
+        async function selectRole(roleId) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/roles`);
+                const data = await resp.json();
+                const role = data.roles.find((item) => item.id === roleId);
+                if (!role) return;
+
+                role.images.forEach((img, i) => {
+                    const input = document.getElementById(`roleImage${i + 1}`);
+                    if (input) input.value = img;
+                });
+                document.getElementById("rolePreset").value = role.preset || "";
+                refreshPreviewCard();
+                updateWorkspaceSummary();
+                closeRoleLibrary();
+            } catch (err) {
+                console.error("选择角色失败:", err);
+            }
+        }
+
+        async function deleteRole(roleId) {
+            if (!confirm("确定删除这个角色组吗？")) return;
+
+            try {
+                await fetch(`${API_BASE}/api/roles/${roleId}`, { method: "DELETE" });
+                await loadRoleLibrary();
+            } catch (err) {
+                alert(`删除失败：${err.message}`);
+            }
+        }
+
+        async function saveToRoleLibrary(images, preset) {
+            try {
+                await fetch(`${API_BASE}/api/roles`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ images, preset })
+                });
+            } catch (err) {
+                console.error("保存到角色库失败:", err);
+            }
+        }
+
+        async function showPromptEditor() {
+            const modal = document.getElementById("promptEditorModal");
+            modal.classList.add("show");
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/prompt_config`);
+                const data = await resp.json();
+                if (!data.success) return;
+                document.getElementById("geminiPrompt").value = data.config.gemini_instruction;
+                document.getElementById("doubaoPrompt").value = data.config.doubao_fixed_prompt;
+            } catch (err) {
+                console.error("加载提示词配置失败:", err);
+            }
+        }
+
+        function closePromptEditor() {
+            document.getElementById("promptEditorModal").classList.remove("show");
+        }
+
+        async function savePromptConfig() {
+            const gemini = document.getElementById("geminiPrompt").value;
+            const doubao = document.getElementById("doubaoPrompt").value;
+
+            try {
+                await fetch(`${API_BASE}/api/prompt_config`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        gemini_instruction: gemini,
+                        doubao_fixed_prompt: doubao
+                    })
+                });
+                alert("提示词配置已保存");
+                closePromptEditor();
+            } catch (err) {
+                alert(`保存失败：${err.message}`);
+            }
+        }
+
+        function setStatus(html, type = "info") {
+            document.getElementById("statusArea").innerHTML =
+                `<div class="status-bar ${type}">${type === "info" ? '<div class="spinner"></div>' : ""}${html}</div>`;
+        }
+
+        function setStep(n) {
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`step${i}`);
+                el.className = `step${i < n ? " done" : i === n ? " active" : ""}`;
+            }
+        }
+
+        function showForceGenerateButton() {
+            document.getElementById("analysisActions").style.display = "flex";
+        }
+
+        function hideForceGenerateButton() {
+            document.getElementById("analysisActions").style.display = "none";
+        }
+
+        async function forceGenerate() {
+            hideForceGenerateButton();
+            await startProcess(true);
+        }
+
+        async function resolveTikTokForSubmit(videoUrl) {
+            const statusDiv = document.getElementById("tiktokStatus");
+            statusDiv.style.display = "";
+            statusDiv.innerHTML = '<div class="status-bar info"><div class="spinner"></div>检测到 TikTok 链接，正在解析下载地址...</div>';
+
+            const resp = await fetch(`${API_BASE}/api/tiktok/resolve`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: videoUrl })
+            });
+            const data = await resp.json();
+
+            if (!resp.ok || !data.success || !data.video_url) {
+                throw new Error(data.error || "TikTok 解析失败");
+            }
+
+            document.getElementById("videoUrl").value = data.video_url;
+            refreshPreviewCard();
+            statusDiv.innerHTML = '<div class="status-bar success">TikTok 解析成功</div>';
+            return data.video_url;
+        }
+
+        async function startProcess(forceGenerate = false) {
+            clearInterval(pollTimer);
+
+            let videoUrl = document.getElementById("videoUrl").value.trim();
+            const roleImages = getRoleImages();
+            const rolePreset = document.getElementById("rolePreset").value.trim();
+            const concurrency = parseInt(document.getElementById("concurrency").value, 10) || 1;
+
+            if (!videoUrl) {
+                alert("请输入视频下载链接");
+                return;
+            }
+            if (!roleImages.length) {
+                alert("请至少输入 1 张角色图片 URL");
+                return;
+            }
+
+            const btn = document.getElementById("startBtn");
+            btn.disabled = true;
+            btn.textContent = forceGenerate ? "强行生成中..." : "处理中...";
+            hideForceGenerateButton();
+
+            if (isTikTokUrl(videoUrl)) {
+                btn.textContent = "正在解析 TikTok 链接...";
+                try {
+                    videoUrl = await resolveTikTokForSubmit(videoUrl);
+                } catch (err) {
+                    document.getElementById("tiktokStatus").innerHTML = `<div class="status-bar error">TikTok 解析失败：${escapeHtml(err.message)}</div>`;
+                    resetBtn();
+                    return;
+                }
+            }
+
+            document.getElementById("progressCard").style.display = "";
+            document.getElementById("analysisCard").style.display = "none";
+            document.getElementById("resultCard").style.display = "none";
+            document.getElementById("batchTasks").innerHTML = "";
+            document.getElementById("resultContent").innerHTML = "";
+
+            await savePreset();
+
+            setStep(1);
+            setStatus("正在调用 Gemini 分析视频内容，通常需要 1 到 2 分钟...");
+
+            let analysis;
+            try {
+                const resp1 = await fetch(`${API_BASE}/api/analyze`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        video_url: videoUrl,
+                        role_images: roleImages,
+                        role_preset: rolePreset,
+                        role_group: "1",
+                        force_generate: forceGenerate
+                    })
+                });
+                const result1 = await resp1.json();
+
+                if (!resp1.ok) {
+                    throw new Error(result1.error || "Gemini 分析请求失败");
+                }
+
+                if (result1.analysis) {
+                    document.getElementById("analysisCard").style.display = "";
+                    document.getElementById("analysisContent").textContent = JSON.stringify(result1.analysis, null, 2);
+                }
+
+                setStep(2);
+
+                if (!result1.success) {
+                    setStatus(`角色不适合该视频：${escapeHtml(result1.reason || "未知原因")}`, "warning");
+                    if (result1.force_available && result1.analysis) {
+                        showForceGenerateButton();
+                    }
+                    resetBtn();
+                    return;
+                }
+
+                analysis = result1.analysis;
+                setStatus(
+                    forceGenerate
+                        ? "已按强行生成模式重建分析，准备创建豆包任务..."
+                        : "角色适配通过，准备创建豆包任务...",
+                    forceGenerate ? "warning" : "success"
+                );
+
+                await saveToRoleLibrary(roleImages, rolePreset);
+            } catch (err) {
+                setStatus(`Gemini 分析出错：${escapeHtml(err.message)}`, "error");
+                resetBtn();
+                return;
+            }
+
+            setStep(3);
+
+            if (concurrency === 1) {
+                setStatus("正在创建豆包 Seedance 任务...");
+                try {
+                    const resp2 = await fetch(`${API_BASE}/api/create_task`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            video_url: videoUrl,
+                            role_images: roleImages,
+                            analysis
+                        })
+                    });
+                    const result2 = await resp2.json();
+
+                    if (!resp2.ok) {
+                        throw new Error(result2.error || "创建豆包任务失败");
+                    }
+
+                    setStep(4);
+                    currentTaskId = result2.task_id;
+                    startPolling(result2.task_id);
+                } catch (err) {
+                    setStatus(`创建豆包任务出错：${escapeHtml(err.message)}`, "error");
+                    resetBtn();
+                }
+                return;
+            }
+
+            setStatus(`正在批量创建 ${concurrency} 个豆包任务...`);
+            try {
+                const resp2 = await fetch(`${API_BASE}/api/batch_create`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        video_url: videoUrl,
+                        role_images: roleImages,
+                        analysis,
+                        concurrency
+                    })
+                });
+                const result2 = await resp2.json();
+
+                if (!resp2.ok) {
+                    throw new Error(result2.error || "批量创建任务失败");
+                }
+
+                setStep(4);
+                currentBatchId = result2.batch_id;
+                startBatchPolling(result2.batch_id);
+            } catch (err) {
+                setStatus(`批量创建任务出错：${escapeHtml(err.message)}`, "error");
+                resetBtn();
+            }
+        }
+
+        function startPolling(taskId) {
+            let attempts = 0;
+            const maxAttempts = 120;
+
+            pollTimer = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) {
+                    clearInterval(pollTimer);
+                    setStatus("任务超时，请稍后手动查询", "error");
+                    resetBtn();
+                    return;
+                }
+
+                setStatus(`正在生成视频... 已等待 ${attempts * 20} 秒`);
+
+                try {
+                    const resp = await fetch(`${API_BASE}/api/status/${taskId}`);
+                    const data = await resp.json();
+
+                    if (data.status === "succeeded") {
+                        clearInterval(pollTimer);
+                        setStep(5);
+                        setStatus("视频生成成功", "success");
+                        showResult(data.video_url);
+                        resetBtn();
+                    } else if (data.status === "failed") {
+                        clearInterval(pollTimer);
+                        setStatus("视频生成失败", "error");
+                        resetBtn();
+                    }
+                } catch (err) {
+                    // 网络错误时继续轮询
+                }
+            }, 20000);
+        }
+
+        function renderBatchTasks(tasks) {
+            const batchDiv = document.getElementById("batchTasks");
+            batchDiv.innerHTML = tasks.map((task) => {
+                const statusClass = task.status === "error" ? "failed" : task.status;
+                const shortId = task.task_id ? escapeHtml(task.task_id.slice(0, 12)) : "未创建";
+                const taskText = task.error ? escapeHtml(task.error.slice(0, 60)) : "等待结果";
+                const linkHtml = task.video_url
+                    ? `<a class="task-link" href="${escapeHtml(task.video_url)}" target="_blank">查看视频</a>`
+                    : "";
+
+                return `
+                    <div class="batch-task-item">
+                        <div class="task-meta">
+                            <strong>任务 #${task.index + 1}</strong>
+                            <span>${shortId} · ${taskText}</span>
+                        </div>
+                        <span class="task-status ${statusClass}">${escapeHtml(task.status)}</span>
+                        ${linkHtml}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function startBatchPolling(batchId) {
+            let attempts = 0;
+            const maxAttempts = 120;
+
+            pollTimer = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) {
+                    clearInterval(pollTimer);
+                    setStatus("批量任务超时", "error");
+                    resetBtn();
+                    return;
+                }
+
+                try {
+                    const resp = await fetch(`${API_BASE}/api/batch_status/${batchId}`);
+                    const data = await resp.json();
+
+                    if (!data.success) {
+                        if (data.error && (data.error.includes("不存在") || data.error.toLowerCase().includes("not found"))) {
+                            clearInterval(pollTimer);
+                            setStatus("批次数据丢失，可能是服务重启导致，请重新提交任务", "error");
+                            resetBtn();
+                        }
+                        return;
+                    }
+
+                    const tasks = data.tasks;
+                    const succeeded = tasks.filter((task) => task.status === "succeeded").length;
+                    const failed = tasks.filter((task) => task.status === "failed" || task.status === "error").length;
+                    const total = tasks.length;
+                    const finished = succeeded + failed;
+
+                    setStatus(`批量生成中... 成功 ${succeeded}/${total}，失败 ${failed}/${total}，已等待 ${attempts * 20} 秒`);
+                    renderBatchTasks(tasks);
+
+                    if (finished === total) {
+                        clearInterval(pollTimer);
+                        setStep(5);
+                        setStatus(`批量生成完成，成功 ${succeeded}，失败 ${failed}`, succeeded > 0 ? "success" : "error");
+                        showBatchResults(tasks);
+                        resetBtn();
+                    }
+                } catch (err) {
+                    // 网络错误时继续轮询
+                }
+            }, 20000);
+        }
+
+        function showResult(videoUrl) {
+            const card = document.getElementById("resultCard");
+            card.style.display = "";
+
+            if (!videoUrl) {
+                document.getElementById("resultContent").innerHTML = '<div class="result-card"><h3>未获取到视频地址</h3><p>任务状态已成功，但返回数据中没有可用的视频链接。</p></div>';
+                return;
+            }
+
+            const safeUrl = escapeHtml(videoUrl);
+            const clickArg = JSON.stringify(videoUrl);
+            document.getElementById("resultContent").innerHTML = `
+                <div class="result-card">
+                    <h3>生成完成</h3>
+                    <p>视频链接：<a href="${safeUrl}" target="_blank">${safeUrl}</a></p>
+                    ${buildVideoPreviewHtml(videoUrl, {
+                        className: "result-video",
+                        fallbackText: "生成结果预览失败，请打开原始链接或直接下载。"
+                    })}
+                    <div class="action-row" style="margin-top:16px;">
+                        <button class="btn btn-download" onclick='downloadResult(${clickArg})'>下载视频到本地</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showBatchResults(tasks) {
+            const card = document.getElementById("resultCard");
+            card.style.display = "";
+
+            const successTasks = tasks.filter((task) => task.status === "succeeded" && task.video_url);
+            if (!successTasks.length) {
+                document.getElementById("resultContent").innerHTML = '<div class="result-card"><h3>没有成功结果</h3><p>本次批量任务未返回可用视频，请检查任务错误信息或重新提交。</p></div>';
+                return;
+            }
+
+            document.getElementById("resultContent").innerHTML = `
+                <div class="result-card">
+                    <h3>批量生成结果</h3>
+                    <p>下面展示本次成功返回视频链接的任务卡片。</p>
+                    <div class="result-grid">
+                        ${successTasks.map((task) => {
+                            const safeUrl = escapeHtml(task.video_url);
+                            const clickArg = JSON.stringify(task.video_url);
+                            return `
+                                <div class="result-card">
+                                    <h3>任务 #${task.index + 1}</h3>
+                                    <p>视频链接：<a href="${safeUrl}" target="_blank">${safeUrl}</a></p>
+                                    ${buildVideoPreviewHtml(task.video_url, {
+                                        className: "result-video",
+                                        fallbackText: "该任务视频预览失败，请打开原始链接或直接下载。"
+                                    })}
+                                    <div class="action-row" style="margin-top:16px;">
+                                        <button class="btn btn-sm btn-download" onclick='downloadResult(${clickArg})'>下载</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join("")}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function downloadResult(videoUrl) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/download`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ video_url: videoUrl })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert(`视频已保存到：${data.path}`);
+                } else {
+                    alert(`下载失败：${data.error || "未知错误"}`);
+                }
+            } catch (err) {
+                alert(`下载失败：${err.message}`);
+            }
+        }
+
+        function resetBtn() {
+            const btn = document.getElementById("startBtn");
+            btn.disabled = false;
+            btn.textContent = "开始角色替换";
+        }
+    </script>
+</body>
+</html>
