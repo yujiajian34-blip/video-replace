@@ -8,31 +8,35 @@ import os
 import re
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
+from config import (
+    AppConfig,
+    BASE_DIR as PROJECT_BASE_DIR,
+    DATA_DIR as PROJECT_DATA_DIR,
+    FRONTEND_DIR as PROJECT_FRONTEND_DIR,
+    RESULTS_DIR as PROJECT_RESULTS_DIR,
+    UPLOAD_DIR as PROJECT_UPLOAD_DIR,
+)
+from services.video_service import VideoManager
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
+BASE_DIR = str(PROJECT_BASE_DIR)
+FRONTEND_DIR = str(PROJECT_FRONTEND_DIR)
+UPLOAD_FOLDER = str(PROJECT_UPLOAD_DIR)
+RESULTS_FOLDER = str(PROJECT_RESULTS_DIR)
+DATA_FOLDER = str(PROJECT_DATA_DIR)
 
 app = Flask(__name__, static_folder=FRONTEND_DIR)
 CORS(app)
 
 # 配置
 CONFIG = {
-    'doubao_api_url': os.getenv('DOUBAO_API_URL', 'http://aigw.primeinnos.com/backend_seedream_cn/api/v3/contents/generations/tasks'),
-    'doubao_model': os.getenv('DOUBAO_MODEL', 'doubao-seedance-2-0-260128'),
-    'doubao_api_token': os.getenv('DOUBAO_API_TOKEN', ''),
-    'gemini_api_url': os.getenv('GEMINI_API_URL', 'http://aigw.primeinnos.com/marketing_center/v1/chat/completions'),
-    'gemini_api_token': os.getenv('GEMINI_API_TOKEN', ''),
-    'gemini_model': os.getenv('GEMINI_MODEL', 'gemini-3.1-pro-preview'),
-    'apify_api_token': os.getenv('APIFY_API_TOKEN', '')
+    'doubao_api_url': AppConfig.DOUBAO_API_URL,
+    'doubao_model': AppConfig.DOUBAO_MODEL,
+    'doubao_api_token': AppConfig.DOUBAO_API_TOKEN,
+    'gemini_api_url': AppConfig.GEMINI_API_URL,
+    'gemini_api_token': AppConfig.GEMINI_API_TOKEN,
+    'gemini_model': AppConfig.GEMINI_MODEL,
+    'apify_api_token': AppConfig.APIFY_API_TOKEN
 }
-
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-RESULTS_FOLDER = os.path.join(BASE_DIR, 'results')
-DATA_FOLDER = os.path.join(BASE_DIR, 'data')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(RESULTS_FOLDER, exist_ok=True)
-os.makedirs(DATA_FOLDER, exist_ok=True)
 
 # 角色库和配置文件路径
 ROLE_LIBRARY_FILE = os.path.join(DATA_FOLDER, 'role_library.json')
@@ -53,6 +57,7 @@ def save_batch_tasks(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 batch_tasks = load_batch_tasks()
+video_manager = VideoManager()
 
 def http_request(method, url, **kwargs):
     """Send HTTP requests without inheriting system proxy environment variables."""
@@ -140,7 +145,7 @@ def add_to_role_library(role_images, role_preset):
     save_role_library(roles)
     return new_role
 
-def build_gemini_instruction(role_preset, role_group_number, role_images, force_generate=False):
+def _deprecated_build_gemini_instruction(role_preset, role_group_number, role_images, force_generate=False):
     instruction = build_gemini_instruction(
         role_preset,
         role_group_number,
@@ -163,7 +168,7 @@ def build_gemini_instruction(role_preset, role_group_number, role_images, force_
 """
     return instruction + force_suffix
 
-def normalize_analysis_result(analysis, role_images, force_generate=False):
+def _deprecated_normalize_analysis_result(analysis, role_images, force_generate=False):
     if not isinstance(analysis, dict):
         return None
 
@@ -235,7 +240,7 @@ def normalize_analysis_result(analysis, role_images, force_generate=False):
     normalized['force_generate'] = force_generate
     return normalized
 
-def analyze_video_with_gemini(video_url, role_images, role_preset, role_group_number, force_generate=False):
+def _deprecated_analyze_video_with_gemini(video_url, role_images, role_preset, role_group_number, force_generate=False):
     """使用Gemini分析视频并生成替换方案"""
 
     prompt_config = load_prompt_config()
@@ -490,6 +495,45 @@ def download_video(video_url, save_path):
         f.write(response.content)
     return save_path
 
+def extract_video_source(data):
+    data = data or {}
+    return str(
+        data.get('prepared_video_url')
+        or data.get('video_source')
+        or data.get('video_url')
+        or ''
+    ).strip()
+
+def prepare_video_for_pipeline(source):
+    source = str(source or '').strip()
+    if not source:
+        raise ValueError('缂哄皯瑙嗛鏉ユ簮')
+
+    public_base = AppConfig.R2_PUBLIC_BASE_URL.rstrip('/')
+    if source.startswith(public_base + '/'):
+        return {
+            'source': source,
+            'local_path': '',
+            'processed_path': '',
+            'public_url': source,
+            'uploaded_filename': source.rsplit('/', 1)[-1],
+            'duration_seconds': 0.0,
+            'processed_duration_seconds': 0.0,
+            'speed_factor': 1.0,
+            'was_downloaded': False,
+            'was_accelerated': False,
+            'has_audio': False
+        }
+
+    return video_manager.prepare_source(source)
+
+def build_upload_filename(filename):
+    raw_name = os.path.basename(filename or 'video.mp4')
+    stem, ext = os.path.splitext(raw_name)
+    safe_stem = re.sub(r'[^A-Za-z0-9._-]+', '_', stem).strip('._') or 'video'
+    safe_ext = ext or '.mp4'
+    return f'{safe_stem}_{int(time.time() * 1000)}{safe_ext}'
+
 def stream_remote_video(video_url, range_header=None):
     """Proxy remote video content for browser playback."""
     headers = {}
@@ -531,22 +575,43 @@ def index():
 def serve_static(path):
     return send_from_directory(FRONTEND_DIR, path)
 
+@app.route('/api/upload_local', methods=['POST'])
+def upload_local():
+    try:
+        video_file = request.files.get('video') or request.files.get('file')
+        if not video_file or not video_file.filename:
+            return jsonify({'error': '缂哄皯瑙嗛鏂囦欢'}), 400
+
+        filename = build_upload_filename(video_file.filename)
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        video_file.save(save_path)
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'local_path': save_path,
+            'source': save_path
+        })
+    except Exception as e:
+        return jsonify({'error': f'鏈湴瑙嗛涓婁紶澶辫触: {str(e)}'}), 500
+
 @app.route('/api/analyze', methods=['POST'])
 def analyze_video():
     """步骤1: Gemini分析视频"""
     try:
-        data = request.json
-        video_url = data.get('video_url')
+        data = request.get_json(silent=True) or {}
+        source = extract_video_source(data)
         role_images = data.get('role_images', [])
         role_preset = data.get('role_preset', '')
         role_group = data.get('role_group', '1')
         force_generate = bool(data.get('force_generate'))
 
-        if not video_url or not role_images:
+        if not source or not role_images:
             return jsonify({'error': '缺少必要参数'}), 400
 
+        prepared_video = prepare_video_for_pipeline(source)
         analysis = analyze_video_with_gemini(
-            video_url,
+            prepared_video['public_url'],
             role_images,
             role_preset,
             role_group,
@@ -562,13 +627,17 @@ def analyze_video():
                 'message': '角色不适合',
                 'reason': analysis.get('role_fit_reason'),
                 'analysis': analysis,
-                'force_available': True
+                'force_available': True,
+                'prepared_video_url': prepared_video['public_url'],
+                'video_processing': prepared_video
             })
 
         return jsonify({
             'success': True,
             'analysis': analysis,
-            'forced': force_generate
+            'forced': force_generate,
+            'prepared_video_url': prepared_video['public_url'],
+            'video_processing': prepared_video
         })
 
     except Exception as e:
@@ -578,22 +647,25 @@ def analyze_video():
 def create_task():
     """步骤2: 创建豆包Seedance任务"""
     try:
-        data = request.json
-        video_url = data.get('video_url')
+        data = request.get_json(silent=True) or {}
+        source = extract_video_source(data)
         role_images = data.get('role_images', [])
         analysis = data.get('analysis', {})
 
-        if not video_url or not analysis:
+        if not source or not analysis:
             return jsonify({'error': '缺少必要参数'}), 400
 
-        task_id = create_doubao_task(video_url, role_images, analysis)
+        prepared_video = prepare_video_for_pipeline(source)
+        task_id = create_doubao_task(prepared_video['public_url'], role_images, analysis)
 
         if not task_id:
             return jsonify({'error': '创建豆包任务失败，未返回task_id'}), 500
 
         return jsonify({
             'success': True,
-            'task_id': task_id
+            'task_id': task_id,
+            'prepared_video_url': prepared_video['public_url'],
+            'video_processing': prepared_video
         })
 
     except Exception as e:
@@ -649,7 +721,7 @@ def get_status(task_id):
 def download():
     """下载生成的视频"""
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         video_url = data.get('video_url')
 
         if not video_url:
@@ -844,22 +916,23 @@ def update_prompt_config():
 def batch_create_tasks():
     """批量并发创建豆包任务"""
     try:
-        data = request.json
-        video_url = data.get('video_url')
+        data = request.get_json(silent=True) or {}
+        source = extract_video_source(data)
         role_images = data.get('role_images', [])
         analysis = data.get('analysis', {})
         concurrency = min(10, max(1, int(data.get('concurrency', 1))))
 
-        if not video_url or not analysis:
+        if not source or not analysis:
             return jsonify({'error': '缺少必要参数'}), 400
 
+        prepared_video = prepare_video_for_pipeline(source)
         batch_id = str(int(time.time() * 1000))
         task_ids = []
         errors = []
 
         def create_single(idx):
             try:
-                tid = create_doubao_task(video_url, role_images, analysis)
+                tid = create_doubao_task(prepared_video['public_url'], role_images, analysis)
                 return {'index': idx, 'task_id': tid, 'status': 'created'}
             except Exception as e:
                 return {'index': idx, 'task_id': None, 'status': 'error', 'error': str(e)}
@@ -877,7 +950,9 @@ def batch_create_tasks():
         return jsonify({
             'success': True,
             'batch_id': batch_id,
-            'tasks': task_ids
+            'tasks': task_ids,
+            'prepared_video_url': prepared_video['public_url'],
+            'video_processing': prepared_video
         })
 
     except Exception as e:

@@ -6,6 +6,7 @@ __pycache__/
 
 results/
 uploads/
+temp/
 
 data/role_library.json
 data/role_preset.json

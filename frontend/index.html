@@ -202,7 +202,7 @@
 
         .workspace {
             display: grid;
-            grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
+            grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
             gap: 24px;
             align-items: start;
         }
@@ -216,6 +216,7 @@
         .side-column {
             position: sticky;
             top: 24px;
+            align-self: start;
         }
 
         .card {
@@ -901,7 +902,7 @@
             cursor: pointer;
         }
 
-        @media (max-width: 1080px) {
+        @media (max-width: 760px) {
             .hero,
             .workspace {
                 grid-template-columns: 1fr;
@@ -1015,6 +1016,15 @@
                                 <div class="field-hint">检测到 TikTok 链接时，页面会在输入后自动尝试解析成可下载直链。</div>
                                 <div id="tiktokStatus" style="display:none; margin-top:10px;"></div>
                             </div>
+                            <div class="form-group">
+                                <label>鏈湴瑙嗛涓婁紶</label>
+                                <div class="flex-row">
+                                    <input type="file" id="localVideoFile" accept="video/*" onchange="handleLocalVideoSelected()">
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="triggerLocalUpload()">涓婁紶鏈湴瑙嗛</button>
+                                </div>
+                                <div class="field-hint">鍙互鐩存帴閫夋嫨鏈湴 MP4/MOV 绛夎棰戯紝绯荤粺浼氬湪鎻愪氦鏃惰嚜鍔ㄤ笂浼犲苟浼樺厛浣跨敤璇ユ簮銆?/div>
+                                <div id="localVideoStatus" style="display:none; margin-top:10px;"></div>
+                            </div>
                         </div>
 
                         <div class="field-card">
@@ -1104,6 +1114,8 @@
                     </div>
                     <div id="resultContent"></div>
                 </div>
+            </div>
+
             </div>
 
             <div class="side-column">
@@ -1204,11 +1216,52 @@
         let pollTimer = null;
         let previewTimer = null;
         let tiktokResolveTimer = null;
+        let currentPreparedVideoUrl = "";
+        let currentLocalVideoPath = "";
+        let currentLocalVideoPreviewUrl = "";
+        let currentLocalVideoName = "";
 
         function getRoleImages() {
             return [1, 2, 3]
                 .map((i) => document.getElementById(`roleImage${i}`).value.trim())
                 .filter(Boolean);
+        }
+
+        function getSelectedLocalVideoFile() {
+            const input = document.getElementById("localVideoFile");
+            return input && input.files && input.files[0] ? input.files[0] : null;
+        }
+
+        function revokeLocalVideoPreviewUrl() {
+            if (currentLocalVideoPreviewUrl && currentLocalVideoPreviewUrl.startsWith("blob:")) {
+                URL.revokeObjectURL(currentLocalVideoPreviewUrl);
+            }
+            currentLocalVideoPreviewUrl = "";
+        }
+
+        function clearPreparedVideoUrl() {
+            currentPreparedVideoUrl = "";
+        }
+
+        function clearLocalVideoState(options = {}) {
+            const { clearInput = true, clearStatus = true } = options;
+            currentLocalVideoPath = "";
+            currentLocalVideoName = "";
+            clearPreparedVideoUrl();
+            revokeLocalVideoPreviewUrl();
+
+            if (clearInput) {
+                const input = document.getElementById("localVideoFile");
+                if (input) input.value = "";
+            }
+
+            if (clearStatus) {
+                const statusDiv = document.getElementById("localVideoStatus");
+                if (statusDiv) {
+                    statusDiv.style.display = "none";
+                    statusDiv.innerHTML = "";
+                }
+            }
         }
 
         function escapeHtml(value) {
@@ -1230,6 +1283,16 @@
                 style = "",
                 fallbackText = "预览失败，请直接打开原始链接。"
             } = options;
+            if (/^(blob:|data:)/i.test(videoUrl)) {
+                return `
+                    <div data-video-preview-host="1" style="width:100%;">
+                        <video class="${className}" controls preload="metadata" playsinline ${style ? `style="${style}"` : ""}>
+                            <source src="${escapeHtml(videoUrl)}">
+                        </video>
+                    </div>
+                `;
+            }
+
             const safeProxyUrl = escapeHtml(buildVideoProxyUrl(videoUrl));
             const safeOriginalUrl = escapeHtml(videoUrl);
             const clickArg = JSON.stringify(videoUrl);
@@ -1260,12 +1323,38 @@
 
         function updateWorkspaceSummary() {
             const videoUrl = document.getElementById("videoUrl").value.trim();
+            const previewVideoUrl = currentLocalVideoPreviewUrl || videoUrl;
             const roleImages = getRoleImages();
             const preset = document.getElementById("rolePreset").value.trim();
             const concurrency = parseInt(document.getElementById("concurrency").value, 10) || 1;
+            const localFile = getSelectedLocalVideoFile();
 
             let sourceText = "未填写";
-            if (videoUrl) {
+            if (localFile || currentLocalVideoPath) {
+                sourceText = isTikTokUrl(videoUrl) ? "TikTok 链接" : "直链 / 表格";
+            }
+
+            if (localFile || currentLocalVideoPath) {
+                sourceText = "鏈湴涓婁紶";
+            }
+
+            document.getElementById("videoSourceStat").textContent = sourceText;
+            document.getElementById("imageCountStat").textContent = `${roleImages.length} 张`;
+            document.getElementById("modeStat").textContent = concurrency > 1 ? `批量 ${concurrency}` : "单任务";
+            document.getElementById("presetLengthStat").textContent = `${preset.length} 字`;
+        }
+
+        function updateWorkspaceSummary() {
+            const videoUrl = document.getElementById("videoUrl").value.trim();
+            const roleImages = getRoleImages();
+            const preset = document.getElementById("rolePreset").value.trim();
+            const concurrency = parseInt(document.getElementById("concurrency").value, 10) || 1;
+            const localFile = getSelectedLocalVideoFile();
+
+            let sourceText = "未填写";
+            if (localFile || currentLocalVideoPath) {
+                sourceText = "本地上传";
+            } else if (videoUrl) {
                 sourceText = isTikTokUrl(videoUrl) ? "TikTok 链接" : "直链 / 表格";
             }
 
@@ -1313,6 +1402,8 @@
         }
 
         function handleVideoInput() {
+            clearLocalVideoState();
+            clearPreparedVideoUrl();
             autoPreviewVideo();
 
             clearTimeout(tiktokResolveTimer);
@@ -1327,6 +1418,83 @@
             tiktokResolveTimer = setTimeout(() => {
                 checkTikTokUrl();
             }, 900);
+        }
+
+        function handleLocalVideoSelected() {
+            const file = getSelectedLocalVideoFile();
+            const statusDiv = document.getElementById("localVideoStatus");
+
+            clearPreparedVideoUrl();
+            currentLocalVideoPath = "";
+            currentLocalVideoName = "";
+            revokeLocalVideoPreviewUrl();
+
+            document.getElementById("videoUrl").value = "";
+            document.getElementById("videoUrlSelect").value = "";
+            document.getElementById("tiktokStatus").style.display = "none";
+
+            if (!file) {
+                statusDiv.style.display = "none";
+                statusDiv.innerHTML = "";
+                refreshPreviewCard();
+                updateWorkspaceSummary();
+                return;
+            }
+
+            currentLocalVideoName = file.name;
+            currentLocalVideoPreviewUrl = URL.createObjectURL(file);
+            statusDiv.style.display = "";
+            statusDiv.innerHTML = `<div class="status-bar info">宸查€夋嫨鏈湴瑙嗛锛?${escapeHtml(file.name)}</div>`;
+            refreshPreviewCard();
+            updateWorkspaceSummary();
+        }
+
+        async function uploadLocalVideo() {
+            const file = getSelectedLocalVideoFile();
+            const statusDiv = document.getElementById("localVideoStatus");
+
+            if (!file) {
+                statusDiv.style.display = "";
+                statusDiv.innerHTML = '<div class="status-bar warning">请先选择一个本地视频文件。</div>';
+                throw new Error("请先选择一个本地视频文件");
+            }
+
+            if (currentLocalVideoPath) {
+                return currentLocalVideoPath;
+            }
+
+            statusDiv.style.display = "";
+            statusDiv.innerHTML = '<div class="status-bar info"><div class="spinner"></div>姝ｅ湪涓婁紶鏈湴瑙嗛...</div>';
+
+            const formData = new FormData();
+            formData.append("video", file, file.name);
+
+            const resp = await fetch(`${API_BASE}/api/upload_local`, {
+                method: "POST",
+                body: formData
+            });
+            const data = await resp.json();
+
+            if (!resp.ok || !data.success || !data.local_path) {
+                const message = data.error || "鏈湴瑙嗛涓婁紶澶辫触";
+                statusDiv.innerHTML = `<div class="status-bar error">${escapeHtml(message)}</div>`;
+                throw new Error(message);
+            }
+
+            currentLocalVideoPath = data.local_path;
+            currentLocalVideoName = data.filename || file.name;
+            clearPreparedVideoUrl();
+            statusDiv.innerHTML = `<div class="status-bar success">鏈湴瑙嗛宸蹭笂浼狅細${escapeHtml(currentLocalVideoName)}</div>`;
+            updateWorkspaceSummary();
+            return currentLocalVideoPath;
+        }
+
+        async function triggerLocalUpload() {
+            try {
+                await uploadLocalVideo();
+            } catch (err) {
+                console.error("Local video upload failed:", err);
+            }
         }
 
         async function checkTikTokUrl() {
@@ -1386,7 +1554,7 @@
 
             updateWorkspaceSummary();
 
-            if (!videoUrl && !images.length) {
+            if (!previewVideoUrl && !images.length) {
                 card.style.display = "none";
                 videoPreview.className = "preview-box empty";
                 videoPreview.textContent = "暂无视频预览";
@@ -1397,9 +1565,51 @@
 
             card.style.display = "";
 
-            if (videoUrl) {
+            if (previewVideoUrl) {
                 videoPreview.className = "preview-box";
-                videoPreview.innerHTML = buildVideoPreviewHtml(videoUrl, {
+                videoPreview.innerHTML = buildVideoPreviewHtml(previewVideoUrl, {
+                    style: "max-width:100%; max-height:320px;",
+                    fallbackText: "源视频预览失败，请直接打开原始链接。"
+                });
+            } else {
+                videoPreview.className = "preview-box empty";
+                videoPreview.textContent = "暂无视频预览";
+            }
+
+            if (images.length) {
+                imagePreview.className = "preview-box";
+                imagePreview.innerHTML = `<div class="preview-images">${images.map((url) => `<img src="${escapeHtml(url)}" loading="lazy">`).join("")}</div>`;
+            } else {
+                imagePreview.className = "preview-box empty";
+                imagePreview.textContent = "暂无图片预览";
+            }
+        }
+
+        function refreshPreviewCard() {
+            const videoUrl = document.getElementById("videoUrl").value.trim();
+            const previewVideoUrl = currentLocalVideoPreviewUrl || videoUrl;
+            const images = getRoleImages();
+
+            const card = document.getElementById("previewCard");
+            const videoPreview = document.getElementById("videoPreview");
+            const imagePreview = document.getElementById("imagePreview");
+
+            updateWorkspaceSummary();
+
+            if (!previewVideoUrl && !images.length) {
+                card.style.display = "none";
+                videoPreview.className = "preview-box empty";
+                videoPreview.textContent = "暂无视频预览";
+                imagePreview.className = "preview-box empty";
+                imagePreview.textContent = "暂无图片预览";
+                return;
+            }
+
+            card.style.display = "";
+
+            if (previewVideoUrl) {
+                videoPreview.className = "preview-box";
+                videoPreview.innerHTML = buildVideoPreviewHtml(previewVideoUrl, {
                     style: "max-width:100%; max-height:320px;",
                     fallbackText: "源视频预览失败，请直接打开原始链接。"
                 });
@@ -1604,15 +1814,26 @@
             return data.video_url;
         }
 
+        async function ensureVideoSourceForSubmit() {
+            const localFile = getSelectedLocalVideoFile();
+            if (localFile) {
+                return uploadLocalVideo();
+            }
+            return document.getElementById("videoUrl").value.trim();
+        }
+
         async function startProcess(forceGenerate = false) {
             clearInterval(pollTimer);
 
             let videoUrl = document.getElementById("videoUrl").value.trim();
+            let videoSource = videoUrl;
+            let preparedVideoUrl = currentPreparedVideoUrl;
+            const localFile = getSelectedLocalVideoFile();
             const roleImages = getRoleImages();
             const rolePreset = document.getElementById("rolePreset").value.trim();
             const concurrency = parseInt(document.getElementById("concurrency").value, 10) || 1;
 
-            if (!videoUrl) {
+            if (!videoUrl && !localFile) {
                 alert("请输入视频下载链接");
                 return;
             }
@@ -1626,7 +1847,7 @@
             btn.textContent = forceGenerate ? "强行生成中..." : "处理中...";
             hideForceGenerateButton();
 
-            if (isTikTokUrl(videoUrl)) {
+            if (localFile) {
                 btn.textContent = "正在解析 TikTok 链接...";
                 try {
                     videoUrl = await resolveTikTokForSubmit(videoUrl);
@@ -1746,6 +1967,182 @@
                     throw new Error(result2.error || "批量创建任务失败");
                 }
 
+                setStep(4);
+                currentBatchId = result2.batch_id;
+                startBatchPolling(result2.batch_id);
+            } catch (err) {
+                setStatus(`批量创建任务出错：${escapeHtml(err.message)}`, "error");
+                resetBtn();
+            }
+        }
+
+        async function startProcess(forceGenerate = false) {
+            clearInterval(pollTimer);
+
+            let videoUrl = document.getElementById("videoUrl").value.trim();
+            let videoSource = videoUrl;
+            let preparedVideoUrl = currentPreparedVideoUrl;
+            const localFile = getSelectedLocalVideoFile();
+            const roleImages = getRoleImages();
+            const rolePreset = document.getElementById("rolePreset").value.trim();
+            const concurrency = parseInt(document.getElementById("concurrency").value, 10) || 1;
+
+            if (!videoUrl && !localFile) {
+                alert("请输入视频链接，或选择一个本地视频文件。");
+                return;
+            }
+            if (!roleImages.length) {
+                alert("请至少填写 1 张角色参考图 URL。");
+                return;
+            }
+
+            const btn = document.getElementById("startBtn");
+            btn.disabled = true;
+            btn.textContent = forceGenerate ? "强制生成中..." : "处理中...";
+            hideForceGenerateButton();
+
+            if (localFile) {
+                btn.textContent = "正在上传本地视频...";
+                try {
+                    videoSource = await ensureVideoSourceForSubmit();
+                    preparedVideoUrl = "";
+                } catch (err) {
+                    setStatus(`本地视频上传失败：${escapeHtml(err.message)}`, "error");
+                    resetBtn();
+                    return;
+                }
+            } else if (isTikTokUrl(videoUrl)) {
+                btn.textContent = "正在解析 TikTok 链接...";
+                try {
+                    videoUrl = await resolveTikTokForSubmit(videoUrl);
+                    videoSource = videoUrl;
+                    preparedVideoUrl = "";
+                } catch (err) {
+                    document.getElementById("tiktokStatus").innerHTML = `<div class="status-bar error">TikTok 解析失败：${escapeHtml(err.message)}</div>`;
+                    resetBtn();
+                    return;
+                }
+            } else {
+                videoSource = videoUrl;
+            }
+
+            document.getElementById("progressCard").style.display = "";
+            document.getElementById("analysisCard").style.display = "none";
+            document.getElementById("resultCard").style.display = "none";
+            document.getElementById("batchTasks").innerHTML = "";
+            document.getElementById("resultContent").innerHTML = "";
+
+            await savePreset();
+
+            setStep(1);
+            setStatus("正在调用 Gemini 分析视频内容，通常需要 1 到 2 分钟...");
+
+            let analysis;
+            try {
+                const resp1 = await fetch(`${API_BASE}/api/analyze`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        video_source: videoSource,
+                        prepared_video_url: preparedVideoUrl,
+                        role_images: roleImages,
+                        role_preset: rolePreset,
+                        role_group: "1",
+                        force_generate: forceGenerate
+                    })
+                });
+                const result1 = await resp1.json();
+
+                if (!resp1.ok) {
+                    throw new Error(result1.error || "Gemini 分析请求失败");
+                }
+
+                preparedVideoUrl = result1.prepared_video_url || preparedVideoUrl;
+                currentPreparedVideoUrl = preparedVideoUrl;
+
+                if (result1.analysis) {
+                    document.getElementById("analysisCard").style.display = "";
+                    document.getElementById("analysisContent").textContent = JSON.stringify(result1.analysis, null, 2);
+                }
+
+                setStep(2);
+
+                if (!result1.success) {
+                    setStatus(`角色不适合该视频：${escapeHtml(result1.reason || "未知原因")}`, "warning");
+                    if (result1.force_available && result1.analysis) {
+                        showForceGenerateButton();
+                    }
+                    resetBtn();
+                    return;
+                }
+
+                analysis = result1.analysis;
+                setStatus(
+                    forceGenerate
+                        ? "已按强制生成模式重建分析，准备创建豆包任务..."
+                        : "角色适配通过，准备创建豆包任务...",
+                    forceGenerate ? "warning" : "success"
+                );
+
+                await saveToRoleLibrary(roleImages, rolePreset);
+            } catch (err) {
+                setStatus(`Gemini 分析出错：${escapeHtml(err.message)}`, "error");
+                resetBtn();
+                return;
+            }
+
+            setStep(3);
+
+            if (concurrency === 1) {
+                setStatus("正在创建豆包 Seedance 任务...");
+                try {
+                    const resp2 = await fetch(`${API_BASE}/api/create_task`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            video_source: videoSource,
+                            prepared_video_url: preparedVideoUrl,
+                            role_images: roleImages,
+                            analysis
+                        })
+                    });
+                    const result2 = await resp2.json();
+
+                    if (!resp2.ok) {
+                        throw new Error(result2.error || "创建豆包任务失败");
+                    }
+
+                    currentPreparedVideoUrl = result2.prepared_video_url || currentPreparedVideoUrl;
+                    setStep(4);
+                    currentTaskId = result2.task_id;
+                    startPolling(result2.task_id);
+                } catch (err) {
+                    setStatus(`创建豆包任务出错：${escapeHtml(err.message)}`, "error");
+                    resetBtn();
+                }
+                return;
+            }
+
+            setStatus(`正在批量创建 ${concurrency} 个豆包任务...`);
+            try {
+                const resp2 = await fetch(`${API_BASE}/api/batch_create`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        video_source: videoSource,
+                        prepared_video_url: preparedVideoUrl,
+                        role_images: roleImages,
+                        analysis,
+                        concurrency
+                    })
+                });
+                const result2 = await resp2.json();
+
+                if (!resp2.ok) {
+                    throw new Error(result2.error || "批量创建任务失败");
+                }
+
+                currentPreparedVideoUrl = result2.prepared_video_url || currentPreparedVideoUrl;
                 setStep(4);
                 currentBatchId = result2.batch_id;
                 startBatchPolling(result2.batch_id);
@@ -1948,6 +2345,117 @@
             btn.disabled = false;
             btn.textContent = "开始角色替换";
         }
+        function applyReadableLocalUploadCopy() {
+            const fileInput = document.getElementById("localVideoFile");
+            if (!fileInput) return;
+
+            const group = fileInput.closest(".form-group");
+            if (!group) return;
+
+            const label = group.querySelector("label");
+            const button = group.querySelector("button");
+            const hint = group.querySelector(".field-hint");
+
+            if (label) label.textContent = "本地视频上传";
+            if (button) button.textContent = "上传本地视频";
+            if (hint) {
+                hint.textContent = "可以直接选择本地 MP4、MOV 等视频文件。系统会在提交时自动上传，并优先使用该视频源。";
+            }
+        }
+
+        function renderLocalVideoStatus(type, message, withSpinner = false) {
+            const statusDiv = document.getElementById("localVideoStatus");
+            if (!statusDiv) return;
+            statusDiv.style.display = "";
+            statusDiv.innerHTML = `<div class="status-bar ${type}">${withSpinner ? '<div class="spinner"></div>' : ""}${message}</div>`;
+        }
+
+        function handleLocalVideoSelected() {
+            const file = getSelectedLocalVideoFile();
+            const statusDiv = document.getElementById("localVideoStatus");
+
+            applyReadableLocalUploadCopy();
+            clearPreparedVideoUrl();
+            currentLocalVideoPath = "";
+            currentLocalVideoName = "";
+            revokeLocalVideoPreviewUrl();
+
+            document.getElementById("videoUrl").value = "";
+            document.getElementById("videoUrlSelect").value = "";
+            document.getElementById("tiktokStatus").style.display = "none";
+
+            if (!file) {
+                if (statusDiv) {
+                    statusDiv.style.display = "none";
+                    statusDiv.innerHTML = "";
+                }
+                refreshPreviewCard();
+                updateWorkspaceSummary();
+                return;
+            }
+
+            currentLocalVideoName = file.name;
+            currentLocalVideoPreviewUrl = URL.createObjectURL(file);
+            renderLocalVideoStatus("info", `已选择本地视频：${escapeHtml(file.name)}`);
+            refreshPreviewCard();
+            updateWorkspaceSummary();
+        }
+
+        async function uploadLocalVideo() {
+            const file = getSelectedLocalVideoFile();
+
+            applyReadableLocalUploadCopy();
+
+            if (!file) {
+                renderLocalVideoStatus("warning", "请先选择一个本地视频文件。");
+                throw new Error("请先选择一个本地视频文件。");
+            }
+
+            if (currentLocalVideoPath) {
+                return currentLocalVideoPath;
+            }
+
+            renderLocalVideoStatus("info", "正在上传本地视频...", true);
+
+            const formData = new FormData();
+            formData.append("video", file, file.name);
+
+            const resp = await fetch(`${API_BASE}/api/upload_local`, {
+                method: "POST",
+                body: formData
+            });
+            const data = await resp.json();
+
+            if (!resp.ok || !data.success || !data.local_path) {
+                const message = data.error || "本地视频上传失败";
+                renderLocalVideoStatus("error", escapeHtml(message));
+                throw new Error(message);
+            }
+
+            currentLocalVideoPath = data.local_path;
+            currentLocalVideoName = data.filename || file.name;
+            clearPreparedVideoUrl();
+            renderLocalVideoStatus("success", `本地视频已上传：${escapeHtml(currentLocalVideoName)}`);
+            updateWorkspaceSummary();
+            return currentLocalVideoPath;
+        }
+
+        async function triggerLocalUpload() {
+            try {
+                await uploadLocalVideo();
+            } catch (err) {
+                console.error("Local video upload failed:", err);
+            }
+        }
+
+        function resetBtn() {
+            const btn = document.getElementById("startBtn");
+            btn.disabled = false;
+            btn.textContent = "开始角色替换";
+        }
+
+        window.addEventListener("load", applyReadableLocalUploadCopy);
+        setTimeout(applyReadableLocalUploadCopy, 0);
     </script>
 </body>
 </html>
